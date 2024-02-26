@@ -1,10 +1,10 @@
 [package]
 name = "manix"
-version = "0.8.0-dev"
+version = "0.8.1"
 edition = "2021"
 license = "Apache-2.0"
 description = "Nix documentation searcher"
-authors = ["mlvzk <mlvzk@protonmail.com>", "n16hth4wk <lecoqjacob@gmail.com>"]
+authors = ["mlvzk <mlvzk@protonmail.com>", "n16hth4wk <lecoqjacob@gmail.com>", "Clemens Horn <clemens.horn@mni.thm.de>"]
 
 [dependencies]
 anyhow = "1"

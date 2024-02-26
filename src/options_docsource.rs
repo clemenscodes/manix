@@ -3,9 +3,9 @@ use crate::{
     Lowercase,
 };
 use colored::*;
+use jq_rs;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, process::Command};
-use jq_rs;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct OptionDocumentation {
@@ -60,14 +60,19 @@ impl OptionsDatabase {
 pub fn try_from_file(path: &PathBuf) -> Result<HashMap<String, OptionDocumentation>, Errors> {
     let slice = std::fs::read_to_string(path)?;
     let output = if !path.to_str().unwrap().contains("home-manager") {
-        jq_rs::run("with_entries(.value.description = .value.description.text)", &slice).unwrap()
+        jq_rs::run(
+            "with_entries(.value.description = .value.description.text)",
+            &slice,
+        )
+        .unwrap()
     } else {
-        jq_rs::run(".\"programs.rio.enable\".description = .\"programs.rio.enable\".description.text | .", &slice).unwrap()
+        jq_rs::run(
+            ".\"programs.rio.enable\".description = .\"programs.rio.enable\".description.text | .",
+            &slice,
+        )
+        .unwrap()
     };
     let trimmed = output.trim_start_matches('"').trim_end_matches('"');
-    if path.to_str().unwrap().contains("home-manager") {
-        println!("{trimmed}");
-    }
     let options: HashMap<String, OptionDocumentation> = serde_json::from_str(&trimmed)?;
     Ok(options)
 }
@@ -131,4 +136,3 @@ pub fn get_nixos_json_doc_path() -> Result<PathBuf, std::io::Error> {
 
     Ok(PathBuf::from(base_path_output.trim_end_matches('\n')))
 }
-
