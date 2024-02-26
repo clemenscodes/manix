@@ -1,22 +1,11 @@
 use crate::{
-    contains_insensitive_ascii,
-    starts_with_insensitive_ascii,
-    Cache,
-    DocEntry,
-    DocSource,
-    Errors,
+    contains_insensitive_ascii, starts_with_insensitive_ascii, Cache, DocEntry, DocSource, Errors,
     Lowercase,
 };
 use colored::*;
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    process::Command,
-};
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, path::PathBuf, process::Command};
+use jq_rs;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct OptionDocumentation {
@@ -50,7 +39,6 @@ impl OptionDocumentation {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OptionsDatabaseType {
     NixOS,
-    NixDarwin,
     HomeManager,
 }
 
@@ -70,8 +58,17 @@ impl OptionsDatabase {
 }
 
 pub fn try_from_file(path: &PathBuf) -> Result<HashMap<String, OptionDocumentation>, Errors> {
-    let options: HashMap<String, OptionDocumentation> =
-        serde_json::from_slice(&std::fs::read(path)?)?;
+    let slice = std::fs::read_to_string(path)?;
+    let output = if !path.to_str().unwrap().contains("home-manager") {
+        jq_rs::run("with_entries(.value.description = .value.description.text)", &slice).unwrap()
+    } else {
+        jq_rs::run(".\"programs.rio.enable\".description = .\"programs.rio.enable\".description.text | .", &slice).unwrap()
+    };
+    let trimmed = output.trim_start_matches('"').trim_end_matches('"');
+    if path.to_str().unwrap().contains("home-manager") {
+        println!("{trimmed}");
+    }
+    let options: HashMap<String, OptionDocumentation> = serde_json::from_str(&trimmed)?;
     Ok(options)
 }
 
@@ -96,7 +93,6 @@ impl DocSource for OptionsDatabase {
     fn update(&mut self) -> Result<bool, Errors> {
         let opts = match self.typ {
             OptionsDatabaseType::NixOS => try_from_file(&get_nixos_json_doc_path()?)?,
-            OptionsDatabaseType::NixDarwin => try_from_file(&get_nd_json_doc_path()?)?,
             OptionsDatabaseType::HomeManager => try_from_file(&get_hm_json_doc_path()?)?,
         };
 
@@ -136,19 +132,3 @@ pub fn get_nixos_json_doc_path() -> Result<PathBuf, std::io::Error> {
     Ok(PathBuf::from(base_path_output.trim_end_matches('\n')))
 }
 
-pub fn get_nd_json_doc_path() -> Result<PathBuf, std::io::Error> {
-    let base_path_output = Command::new("nix-build")
-        .env("NIXPKGS_ALLOW_UNFREE", "1")
-        .env("NIXPKGS_ALLOW_BROKEN", "1")
-        .env("NIXPKGS_ALLOW_INSECURE", "1")
-        .env("NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM", "1")
-        .arg("--no-out-link")
-        .arg("-E")
-        .arg(include_str!("nix/darwin-options.nix"))
-        .output()
-        .map(|o| String::from_utf8(o.stdout).unwrap())?;
-
-    println!("{}", base_path_output.trim_end_matches('\n'));
-
-    Ok(PathBuf::from(base_path_output.trim_end_matches('\n')))
-}

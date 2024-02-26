@@ -16,6 +16,7 @@ colored = "2"
 crc32fast = "1"
 lazy_static = "1"
 rayon = "1"
+jq-rs = { version = "0.4.1", features = ["bundled"]}
 rnix = "0.11"
 rowan = "0.15"
 roxmltree = "0.19"

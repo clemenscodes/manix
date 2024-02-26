@@ -1,0 +1,14 @@
+{
+  "configurations": [
+    {
+      "name": "Manix",
+      "type": "codelldb",
+      "request": "launch",
+      "sourceLanguages": ["rust"],
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/target/debug/manix",
+      "args": ["--update-cache", "--source", "nixos-options", "monero"],
+      "stopOnEntry": false
+    }
+  ]
+}
